@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Absensi Online</title>
+
+<style>
+
+body{
+    font-family:Arial;
+    padding:20px;
+    background:#f3f5f8;
+}
+
+.toolbar{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    align-items:center;
+    margin-bottom:10px;
+}
+
+.toolbar select,
+.toolbar input{
+    height:48px;
+    font-size:20px;
+    padding:0 10px;
+}
+
+.toolbar button{
+    height:48px;
+    padding:0 15px;
+    font-size:16px;
+    white-space:nowrap;
+}
+
+button{
+    cursor:pointer;
+}
+
+.table-container{
+    overflow:auto;
+    max-width:100%;
+    max-height:80vh;
+}
+
+table{
+    border-collapse:collapse;
+    width:auto;
+}
+
+th,
+td{
+    border:1px solid #ccc;
+    padding:4px 8px;
+    white-space:nowrap;
+}
+
+th{
+    background:#0d6efd;
+    color:white;
+    position:sticky;
+    top:0;
+    z-index:10;
+}
+
+.nama{
+    text-align:left;
+    padding-left:15px;
+    width:auto;
+    font-size:20px;
+}
+
+.sticky-no{
+    position:sticky;
+    left:0;
+    background:white;
+    z-index:5;
+}
+
+th.sticky-no{
+    position:sticky;
+    left:0;
+    top:0;
+    background:#0d6efd;
+    color:white;
+    z-index:20;
+}
+
+.h{
+    background:#198754;
+    color:white;
+}
+
+.s{
+    background:#ffc107;
+}
+
+.i{
+    background:#0dcaf0;
+    color:white;
+}
+
+.a{
+    background:#dc3545;
+    color:white;
+}
+
+.h,
+.s,
+.i,
+.a{
+    width:38px;
+    height:38px;
+    padding:0;
+    margin:0;
+    font-size:16px;
+    font-weight:bold;
+    border:none;
+    border-radius:6px;
+}
+
+.active{
+    outline:3px solid black;
+}
+
+.kelas-box{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(80px,1fr));
+    gap:8px;
+    margin:10px 0;
+}
+
+.kelas-box label{
+    border:1px solid #ddd;
+    border-radius:8px;
+    padding:10px;
+    background:white;
+}
+</style>
+</head>
+<body>
+
+<h2>JURNAL MENGAJAR</h2>
+<div class="toolbar">
+<select id="kelas" onchange="loadSiswa()">
+<option>7A</option>
+<option>7B</option>
+<option>7C</option>
+<option>7D</option>
+<option>7E</option>
+<option>7F</option>
+<option>7G</option>
+<option>7H</option>
+<option>7I</option>
+</select>
+
+<input type="date" id="tanggal">
+
+<select id="jam">
+    <option value="">Pilih Jam</option>
+
+    <option>1</option>
+    <option>1-2</option>
+    <option>1-3</option>
+
+    <option>2</option>
+    <option>2-3</option>
+    <option>2-4</option>
+
+    <option>3</option>
+    <option>3-4</option>
+    <option>3-5</option>
+
+    <option>4</option>
+    <option>4-5</option>
+    <option>4-6</option>
+
+    <option>5</option>
+    <option>5-6</option>
+    <option>5-7</option>
+
+    <option>6</option>
+    <option>6-7</option>
+    <option>6-8</option>
+
+    <option>7</option>
+    <option>7-8</option>
+
+    <option>8</option>
+</select>
+
+<select id="mapel">
+    <option value="">
+        Pilih Mapel
+    </option>
+</select>
+
+<select id="guru">
+    <option value="">
+        Pilih Guru
+    </option>
+</select>
+
+<textarea
+id="materi"
+placeholder="Materi Ajar"
+style="height:48px;font-size:20px;padding:10px;"></textarea>
+
+<button onclick="simpan()">
+Simpan
+</button>
+    
+<select id="kelasDownload">
+    <option value="">Pilih Kelas</option>
+    <option value="7A">7A</option>
+    <option value="7B">7B</option>
+    <option value="7C">7C</option>
+    <option value="7D">7D</option>
+    <option value="7E">7E</option>
+    <option value="7F">7F</option>
+    <option value="7G">7G</option>
+    <option value="7H">7H</option>
+    <option value="7I">7I</option>
+    <option value="SEMUA">SEMUA KELAS</option>
+</select>
+
+<button onclick="downloadCSV()">
+📥 Download
+</button>
+</div>
+    
+<div style="overflow:auto">
+<div class="table-container">
+<table>
+
+<thead>
+<tr>
+<th class="sticky-no">No</th>
+<th>NIS</th>
+<th>Nama</th>
+<th>L/P</th>
+<th>H</th>
+<th>S</th>
+<th>I</th>
+<th>A</th>
+</tr>
+</thead>
+
+<tbody id="tbody"></tbody>
+
+</table>
+</div>
+</div>
+    
+<script>
+
+const API = "https://script.google.com/macros/s/AKfycbz9wik0RqgmN_s-Hb6PPBBZrDdVVpegBoizjki9Es7wvtxW5jMlIBPY3z-f23nlYJ8/exec";
+
+let dataSiswa = [];
+
+async function loadSiswa(){
+
+    try{
+
+        const kelas =
+        document.getElementById("kelas").value;
+
+        const res =
+        await fetch(API + "?kelas=" + kelas);
+
+        dataSiswa =
+        await res.json();
+
+        dataSiswa.forEach(s=>{
+            s.status = "H";
+        });
+
+        render();
+
+    }catch(err){
+
+        alert("Gagal mengambil data siswa");
+
+    }
+}
+
+async function loadMapel(){
+
+    try{
+
+        const res =
+        await fetch(
+            API + "?master=Mapel"
+        );
+
+        const data =
+        await res.json();
+
+        const select =
+        document.getElementById("mapel");
+
+        select.innerHTML =
+        '<option value="">Pilih Mapel</option>';
+
+        data.forEach(m=>{
+
+            select.innerHTML +=
+            `<option value="${m}">
+                ${m}
+            </option>`;
+
+        });
+
+    }catch(err){
+
+        alert(
+            "Gagal memuat data mapel"
+        );
+
+    }
+
+}
+
+async function loadGuru(){
+
+    try{
+
+        const res =
+        await fetch(
+            API + "?master=Guru"
+        );
+
+        const data =
+        await res.json();
+
+        const select =
+        document.getElementById("guru");
+
+        select.innerHTML =
+        '<option value="">Pilih Guru</option>';
+
+        data.forEach(g=>{
+
+            select.innerHTML +=
+            `<option value="${g}">
+                ${g}
+            </option>`;
+
+        });
+
+    }catch(err){
+
+        alert(
+            "Gagal memuat data guru"
+        );
+
+    }
+
+}
+
+function render(){
+
+    let html = "";
+
+    dataSiswa.forEach((s,i)=>{
+
+        html += `
+        <tr>
+
+        <td class="sticky-no">${s.no}</td>
+
+        <td>${s.nis}</td>
+
+        <td class="nama">${s.nama}</td>
+
+        <td>${s.jk}</td>
+
+        <td>
+        <button
+        class="h ${s.status==='H'?'active':''}"
+        onclick="setStatus(${i},'H')">
+        H
+        </button>
+        </td>
+
+        <td>
+        <button
+        class="s ${s.status==='S'?'active':''}"
+        onclick="setStatus(${i},'S')">
+        S
+        </button>
+        </td>
+
+        <td>
+        <button
+        class="i ${s.status==='I'?'active':''}"
+        onclick="setStatus(${i},'I')">
+        I
+        </button>
+        </td>
+
+        <td>
+        <button
+        class="a ${s.status==='A'?'active':''}"
+        onclick="setStatus(${i},'A')">
+        A
+        </button>
+        </td>
+
+        </tr>
+        `;
+    });
+
+    document.getElementById("tbody").innerHTML = html;
+}
+
+function setStatus(i,status){
+
+    dataSiswa[i].status = status;
+
+    render();
+}
+
+async function simpan(){
+
+    try{
+
+        const data = {
+
+            tanggal:
+            document.getElementById("tanggal").value,
+
+            jam:
+            document.getElementById("jam").value,
+
+            kelas:
+            document.getElementById("kelas").value,
+
+mapel:
+document.getElementById("mapel").value,
+
+guru:
+document.getElementById("guru").value,
+
+materi:
+document.getElementById("materi").value,
+
+            absensi:
+            dataSiswa
+
+        };
+
+        // VALIDASI
+        if(!data.tanggal){
+            alert("Pilih tanggal");
+            return;
+        }
+
+        if(!data.jam){
+            alert("Pilih jam");
+            return;
+        }
+
+        if(!data.mapel){
+            alert("Pilih mata pelajaran");
+            return;
+        }
+
+        if(!data.guru){
+    alert("Pilih guru");
+    return;
+}
+
+        if(!data.materi.trim()){
+            alert("Materi ajar belum diisi");
+            return;
+        }
+
+        const res = await fetch(API,{
+            method:"POST",
+            body:JSON.stringify(data)
+        });
+
+        await res.text();
+
+        alert("Jurnal berhasil disimpan");
+
+    }catch(err){
+
+        alert("Gagal menyimpan jurnal");
+
+    }
+
+}
+
+window.onload = function(){
+
+    document.getElementById("tanggal").value =
+    new Date().toISOString().split("T")[0];
+
+    loadSiswa();
+
+    loadMapel();
+
+    loadGuru();
+
+}
+
+// ================= DOWNLOAD =================
+
+async function downloadCSV(){
+
+    let kelas =
+    document.getElementById(
+        "kelasDownload"
+    ).value;
+
+    if(!kelas){
+
+        alert(
+            "Pilih kelas terlebih dahulu"
+        );
+
+        return;
+    }
+
+    try{
+
+        let response =
+        await fetch(
+            API + "?rekap=" + kelas
+        );
+
+        let data =
+        await response.json();
+
+        let csv = "";
+
+        data.forEach(function(row){
+
+            csv +=
+            row.join(";") + "\n";
+
+        });
+
+        Android.downloadCSV(csv);
+
+    }catch(err){
+
+        alert(err.toString());
+
+    }
+
+}
+
+</script>
+
+</body>
+</html>
