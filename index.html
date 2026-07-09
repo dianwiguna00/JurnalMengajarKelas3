@@ -624,25 +624,14 @@ async function simpan(){
 
         }
 
-        const res =
-        await fetch(
-            API,
-            {
-
-                method:"POST",
-
-                headers:{
-                    "Content-Type":
-                    "application/json"
-                },
-
-                body:
-                JSON.stringify(
-                    data
-                )
-
-            }
-        );
+const res =
+await fetch(
+    API,
+    {
+        method:"POST",
+        body:JSON.stringify(data)
+    }
+);
 
         const hasil =
         await res.json();
